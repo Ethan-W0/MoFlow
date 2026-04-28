@@ -47,5 +47,6 @@ public class MockUserFilter extends OncePerRequestFilter {
         UserInfo existingUser = userInfoDataService.createOrGetUser(userInfo);
         request.setAttribute(USER_INFO_ATTRIBUTE, existingUser);
 
+        filterChain.doFilter(request, response);
     }
 }

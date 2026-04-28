@@ -1,2 +1,5 @@
 .idea/
 console/backend/hub/src/main/resources/application-local.yml
+console/backend/toolkit/target
+console/backend/hub/target
+console/backend/commons/target
