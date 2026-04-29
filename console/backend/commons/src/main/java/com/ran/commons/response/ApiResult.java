@@ -52,4 +52,8 @@ public record ApiResult<T>(int code, String message, T data, Long timestamp){
     public static <T> ApiResult<T> error(int code, String messageKey, String[] args) {
         return new ApiResult<>(code, I18nUtil.getMessage(messageKey, args), null, System.currentTimeMillis());
     }
+
+    public static <T> ApiResult<T> error(String message){
+        return new ApiResult<>(-1,message,null , System.currentTimeMillis());
+    }
 }
