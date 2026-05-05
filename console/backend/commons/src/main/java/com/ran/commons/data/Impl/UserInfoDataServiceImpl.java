@@ -1,21 +1,32 @@
 package com.ran.commons.data.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ran.commons.constant.ResponseEnum;
 import com.ran.commons.data.UserInfoDataService;
 import com.ran.commons.entity.UserInfo;
+import com.ran.commons.enums.space.EnterpriseServiceTypeEnum;
+import com.ran.commons.event.UserNicknameUpdatedEvent;
+import com.ran.commons.exception.BusinessException;
 import com.ran.commons.mapper.UserInfoMapper;
 import com.ran.commons.util.I18nUtil;
+import com.ran.commons.util.RequestContextUtil;
+import kotlin.jvm.internal.Lambda;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.User;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+
 
 @Service
 @Slf4j
@@ -26,6 +37,8 @@ public class UserInfoDataServiceImpl implements UserInfoDataService {
     private RedissonClient redissonClient;
     @Autowired
     private UserInfoMapper userInfoMapper;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
 
     private static final String[] CHINESE_ADJECTIVES = {
@@ -117,8 +130,344 @@ public class UserInfoDataServiceImpl implements UserInfoDataService {
             throw new IllegalStateException("Interrupted while acquiring distributed lock", e);
         }
     }
-    private String generateRandomNickname(){
+
+    @Override
+    public Optional<UserInfo> findByUsername(String username) {
+        if (StringUtils.isBlank(username)) {
+            return Optional.empty();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getUsername, username)
+                .last("LIMIT 1");
+        UserInfo userInfo = userInfoMapper.selectOne(wrapper);
+        return Optional.ofNullable(userInfo);
+    }
+
+    @Override
+    public List<UserInfo> findUsersByMobile(String mobile) {
+        if (StringUtils.isBlank(mobile)) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getMobile, mobile);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findUsersByMobiles(Collection<String> mobiles) {
+        if (mobiles.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(UserInfo::getMobile, mobiles);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findUsersByUsername(String username) {
+        if (StringUtils.isBlank(username)) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getUsername, username);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findUsersByUsernames(Collection<String> usernames) {
+        if (usernames.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getUsername, usernames);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findByAccountStatus(Integer accountStatus) {
+        if (accountStatus == null) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getAccountStatus, accountStatus);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findByNicknameLike(String nickname) {
+        if (StringUtils.isBlank(nickname)) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(UserInfo::getNickname, nickname);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findActiveUsers() {
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getAccountStatus, 1);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public boolean deleteUser(Long id) {
+        if (id == null) {
+            return false;
+        }
+        return userInfoMapper.deleteById(id)>0;
+    }
+
+    @Override
+    public boolean updateUserAgreement(String uid, int userAgreement) {
+        if (uid == null) {
+            return false;
+        }
+        LambdaUpdateWrapper<UserInfo> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(UserInfo::getUid, uid)
+                .set(UserInfo::getUserAgreement, userAgreement);
+        return userInfoMapper.update(null, wrapper) > 0;
+    }
+
+    @Override
+    public boolean updateAccountStatus(String uid, int accountStatus) {
+        if (uid == null) {
+            return false;
+        }
+        LambdaUpdateWrapper<UserInfo> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(UserInfo::getUid, uid)
+                .set(UserInfo::getAccountStatus, accountStatus);
+        return userInfoMapper.update(null, wrapper) > 0;
+    }
+
+    @Override
+    public List<UserInfo> findByUids(Collection<String> uids) {
+        if (uids == null || uids.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(UserInfo::getUid, uids);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        if (StringUtils.isBlank(username)) {
+            return false;
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getUsername, username);
+        return userInfoMapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public boolean existsByMobile(String mobile) {
+        if (StringUtils.isBlank(mobile)){
+            return false;
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getMobile , mobile);
+        return userInfoMapper.selectCount(wrapper)>0;
+
+    }
+
+    @Override
+    public boolean existsByUid(String uid) {
+        if (uid == null) {
+            return false;
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getUid, uid);
+        return userInfoMapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public long countUsers() {
+        return userInfoMapper.selectCount(null);
+    }
+
+    @Override
+    public long countByAccountStatus(Integer accountStatus) {
+        if (accountStatus == null) {
+            return 0;
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getAccountStatus, accountStatus);
+        return userInfoMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findUsersByCondition(String username, String mobile, Integer accountStatus, int page, int size) {
+        if (page < 1 || size < 1) {
+            return List.of();
+        }
+
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+
+        if (StringUtils.isNotBlank(username)) {
+            wrapper.like(UserInfo::getUsername, username);
+        }
+
+        if (StringUtils.isNotBlank(mobile)) {
+            wrapper.like(UserInfo::getMobile, mobile);
+        }
+
+        if (accountStatus != null) {
+            wrapper.eq(UserInfo::getAccountStatus, accountStatus);
+        }
+
+        wrapper.orderByDesc(UserInfo::getCreateTime);
+        Page<UserInfo> pageParam = new Page<>(page,size);
+        Page<UserInfo> result = userInfoMapper.selectPage(pageParam, wrapper);
+        return result.getRecords();
+    }
+
+    @Override
+    public List<UserInfo> findUsersByPage(int page, int size) {
+        if (page < 1 || size < 1) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(UserInfo::getCreateTime);
+        Page<UserInfo> pageParam = new Page<>(page,size);
+        Page<UserInfo> result = userInfoMapper.selectPage(pageParam, wrapper);
+        return result.getRecords();
+    }
+
+    @Override
+    public UserInfo getCurrentUserInfo() {
+        String currentUid = RequestContextUtil.getUID();
+        return findByUid(currentUid).orElseThrow(() -> new BusinessException(ResponseEnum.DATA_NOT_FOUND, "Current user info does not exist"));
+    }
+
+    @Override
+    public UserInfo updateUserBasicInfo(String uid, String username, String nickname, String avatar, String mobile) {
+        if (uid == null) {
+            throw new IllegalArgumentException("User UID cannot be null");
+        }
+        Optional<UserInfo> userInfoOpt = findByUid(uid);
+        if (userInfoOpt.isEmpty()) {
+            throw new BusinessException(ResponseEnum.DATA_NOT_FOUND);
+        }
+        UserInfo userInfo = userInfoOpt.get();
+        String oldNickname = userInfo.getNickname();
+        if (StringUtils.isNotBlank(username)) {
+            userInfo.setUsername(username);
+        }
+        if (StringUtils.isNotBlank(nickname)) {
+            userInfo.setNickname(nickname);
+        }
+        if (StringUtils.isNotBlank(avatar)) {
+            userInfo.setAvatar(avatar);
+        }
+        if (StringUtils.isNotBlank(mobile)) {
+            userInfo.setMobile(mobile);
+        }
+        userInfo.setUpdateTime(LocalDateTime.now());
+        userInfoMapper.updateById(userInfo);
+        if (StringUtils.isNotBlank(nickname) && !nickname.equals(oldNickname)){
+            eventPublisher.publishEvent(new UserNicknameUpdatedEvent(this, uid, oldNickname, nickname));
+            log.info("Published nickname update event for uid: {}, oldNickname: {}, newNickname: {}",
+                    uid, oldNickname, nickname);
+        }
+        return userInfo;
+    }
+
+    @Override
+    public UserInfo updateCurrentUserBasicInfo(String nickname, String avatar) {
+        String currentUid = RequestContextUtil.getUID();
+        Optional<UserInfo> userInfoOpt = findByUid(currentUid);
+
+        if (userInfoOpt.isEmpty()) {
+            throw new IllegalArgumentException("Current user does not exist");
+        }
+
+        UserInfo userInfo = userInfoOpt.get();
+        String oldNickname = userInfo.getNickname();
+
+        if (StringUtils.isNotBlank(nickname)) {
+            userInfo.setNickname(nickname);
+        }
+        if (StringUtils.isNotBlank(avatar)) {
+            userInfo.setAvatar(avatar);
+        }
+        userInfo.setUpdateTime(LocalDateTime.now());
+        userInfoMapper.updateById(userInfo);
+
+        // If the nickname has changed, publish an event
+        if (StringUtils.isNotBlank(nickname) && !nickname.equals(oldNickname)) {
+            eventPublisher.publishEvent(new UserNicknameUpdatedEvent(this, currentUid, oldNickname, nickname));
+            log.info("Published nickname update event for uid: {}, oldNickname: {}, newNickname: {}",
+                    currentUid, oldNickname, nickname);
+        }
+
+        return userInfo;
+    }
+
+
+    @Override
+    public boolean agreeUserAgreement() {
+        String currentUid = RequestContextUtil.getUID();
+        return updateUserAgreement(currentUid, 1);
+    }
+
+    @Override
+    public boolean updateUserEnterpriseServiceType(String uid, EnterpriseServiceTypeEnum serviceType) {
+        if (uid == null) {
+            return false;
+        }
+        LambdaUpdateWrapper<UserInfo> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(UserInfo::getUid, uid)
+                .set(UserInfo::getEnterpriseServiceType, serviceType);
+        return userInfoMapper.update(null, wrapper) > 0;
+    }
+
+    @Override
+    public boolean activateUser(String uid) {
+        return updateAccountStatus(uid, 1);
+    }
+
+    @Override
+    public boolean freezeUser(String uid) {
+        return updateAccountStatus(uid, 2);
+    }
+
+    @Override
+    public List<UserInfo> findUsersByTimeRange(LocalDateTime startTime, LocalDateTime endTime) {
+        if (startTime == null || endTime == null) {
+            return List.of();
+        }
+
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.between(UserInfo::getCreateTime, startTime, endTime)
+                .orderByDesc(UserInfo::getCreateTime);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> findRecentUsers(int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(UserInfo::getCreateTime)
+                .last("LIMIT " + limit);
+        return userInfoMapper.selectList(wrapper);
+    }
+
+    @Override
+    public Optional<String> findNickNameByUid(String uid) {
+        return Optional.ofNullable(uid)
+                .map(u -> userInfoMapper.selectOne(
+                        new LambdaQueryWrapper<UserInfo>()
+                                .eq(UserInfo::getUid, u)
+                                .last("LIMIT 1")))
+                .map(UserInfo::getNickname);
+    }
+    private String generateRandomNickname() {
         String language = I18nUtil.getLanguage();
+
         if ("zh".equals(language)) {
             String adjective = CHINESE_ADJECTIVES[RANDOM.nextInt(CHINESE_ADJECTIVES.length)];
             String noun = CHINESE_NOUNS[RANDOM.nextInt(CHINESE_NOUNS.length)];

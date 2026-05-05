@@ -1,15 +1,20 @@
 package com.ran.commons.service.space.impl;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.ran.commons.dto.space.EnterpriseVO;
+import com.ran.commons.entity.UserInfo;
 import com.ran.commons.entity.space.Enterprise;
+import com.ran.commons.entity.space.EnterpriseUser;
 import com.ran.commons.mapper.EnterpriseMapper;
 import com.ran.commons.service.space.EnterpriseService;
 import com.ran.commons.util.RequestContextUtil;
+import com.ran.commons.util.space.EnterpriseInfoUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +27,8 @@ public class EnterpriseServiceImpl extends ServiceImpl<EnterpriseMapper,Enterpri
     @Autowired
     private RedissonClient redissonClient;
 
+    @Autowired
+    private 
     @Override
     public Long getLastVisitEnterpriseId() {
         String uid = RequestContextUtil.getUID();
@@ -66,8 +73,24 @@ public class EnterpriseServiceImpl extends ServiceImpl<EnterpriseMapper,Enterpri
 
     @Override
     public EnterpriseVO detail() {
+        // 获取当前用户信息，uid和企业id
         String uid = RequestContextUtil.getUID();
+        Long enterpriseId = EnterpriseInfoUtil.getEnterpriseId();
 
+        if (enterpriseId == null) {
+            return null;
+        }
+        Enterprise enterprise = this.getById(enterpriseId);
+        if (enterprise == null) {
+            return null;
+        }
+        EnterpriseVO vo = new EnterpriseVO();
+        BeanUtils.copyProperties(enterprise, vo);
+        UserInfo userInfo = userInfoDataService.findByUid(vo.getUid()).orElseThrow();
+        vo.setOfficerName(userInfo.getNickname());
+        EnterpriseUser enterpriseUser = enterpriseUserService.getEnterpriseUserByUid(enterpriseId, uid);
+        vo.setRole(enterpriseUser.getRole());
+        return vo;
     }
 
     @Override

@@ -1,11 +1,12 @@
 package com.ran.commons.util;
 
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+
 import com.ran.commons.config.JwtClaimsFilter;
 import com.ran.commons.constant.ResponseEnum;
 import com.ran.commons.entity.UserInfo;
 import com.ran.commons.exception.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
