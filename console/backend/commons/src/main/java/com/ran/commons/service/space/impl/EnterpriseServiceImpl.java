@@ -3,12 +3,14 @@ package com.ran.commons.service.space.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.ran.commons.data.UserInfoDataService;
 import com.ran.commons.dto.space.EnterpriseVO;
 import com.ran.commons.entity.UserInfo;
 import com.ran.commons.entity.space.Enterprise;
 import com.ran.commons.entity.space.EnterpriseUser;
 import com.ran.commons.mapper.EnterpriseMapper;
 import com.ran.commons.service.space.EnterpriseService;
+import com.ran.commons.service.space.EnterpriseUserService;
 import com.ran.commons.util.RequestContextUtil;
 import com.ran.commons.util.space.EnterpriseInfoUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -28,7 +30,10 @@ public class EnterpriseServiceImpl extends ServiceImpl<EnterpriseMapper,Enterpri
     private RedissonClient redissonClient;
 
     @Autowired
-    private 
+    private UserInfoDataService userInfoDataService;
+
+    @Autowired
+    private EnterpriseUserService enterpriseUserService;
     @Override
     public Long getLastVisitEnterpriseId() {
         String uid = RequestContextUtil.getUID();
