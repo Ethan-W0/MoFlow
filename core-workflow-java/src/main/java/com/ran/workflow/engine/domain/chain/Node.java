@@ -3,11 +3,17 @@ package com.ran.workflow.engine.domain.chain;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ran.workflow.engine.constants.NodeStatusEnum;
 import com.ran.workflow.engine.constants.NodeTypeEnum;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Node{
     @JsonProperty("id")
     private String id;

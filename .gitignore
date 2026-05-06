@@ -4,3 +4,5 @@ console/backend/toolkit/target
 console/backend/hub/target
 console/backend/commons/target
 console/frontend/
+
+core-workflow-java/src/main/resources/application.yml

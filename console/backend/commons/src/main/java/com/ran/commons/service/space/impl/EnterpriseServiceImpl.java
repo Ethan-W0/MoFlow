@@ -8,7 +8,7 @@ import com.ran.commons.dto.space.EnterpriseVO;
 import com.ran.commons.entity.UserInfo;
 import com.ran.commons.entity.space.Enterprise;
 import com.ran.commons.entity.space.EnterpriseUser;
-import com.ran.commons.mapper.EnterpriseMapper;
+import com.ran.commons.mapper.space.EnterpriseMapper;
 import com.ran.commons.service.space.EnterpriseService;
 import com.ran.commons.service.space.EnterpriseUserService;
 import com.ran.commons.util.RequestContextUtil;
@@ -63,7 +63,18 @@ public class EnterpriseServiceImpl extends ServiceImpl<EnterpriseMapper,Enterpri
 
     @Override
     public Integer checkNeedCreateTeam() {
-        return 0;
+        UserInfo userInfo = RequestContextUtil.getUserInfo();
+        Enterprise enterprise = getEnterpriseByUid(userInfo.getUid());
+        if (enterprise != null) {
+            // Already joined an enterprise team, no need to create a team
+            return 0;
+        }
+        if (userInfo == null || userInfo.getEnterpriseServiceType() == null) {
+            // No enterprise service, need to create a personal team
+            return 0;
+        }
+        // Has enterprise service, need to create an enterprise team
+        return userInfo.getEnterpriseServiceType().getCode();
     }
 
     @Override
@@ -100,7 +111,8 @@ public class EnterpriseServiceImpl extends ServiceImpl<EnterpriseMapper,Enterpri
 
     @Override
     public List<EnterpriseVO> joinList() {
-        return List.of();
+        String uid = RequestContextUtil.getUID();
+        return this.baseMapper.selectByJoinUid(uid);
     }
 
     @Override
