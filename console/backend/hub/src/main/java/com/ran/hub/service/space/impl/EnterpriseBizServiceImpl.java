@@ -1,14 +1,19 @@
 package com.ran.hub.service.space.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.ran.commons.constant.ResponseEnum;
+import com.ran.commons.dto.space.EnterpriseAddDTO;
 import com.ran.commons.entity.space.Enterprise;
 import com.ran.commons.entity.space.EnterpriseUser;
+import com.ran.commons.enums.space.EnterpriseRoleEnum;
+import com.ran.commons.exception.BusinessException;
 import com.ran.commons.mapper.space.EnterpriseMapper;
 import com.ran.commons.response.ApiResult;
 import com.ran.commons.service.space.EnterpriseService;
 import com.ran.commons.service.space.EnterpriseUserService;
 import com.ran.commons.util.RequestContextUtil;
 import com.ran.commons.util.space.EnterpriseInfoUtil;
+import com.ran.commons.util.space.OrderInfoUtil;
 import com.ran.hub.service.space.EnterpriseBizService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

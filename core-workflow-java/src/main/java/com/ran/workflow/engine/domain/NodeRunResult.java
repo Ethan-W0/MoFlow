@@ -1,5 +1,6 @@
 package com.ran.workflow.engine.domain;
 
+import com.ran.workflow.engine.constants.NodeExecStatusEnum;
 import com.ran.workflow.engine.domain.callbacks.GenerateUsage;
 import com.ran.workflow.exception.NodeCustomException;
 import lombok.Data;

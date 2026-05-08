@@ -1,33 +1,42 @@
 package com.ran.hub.controller.space;
 
-import com.ran.commons.dto.space.EnterpriseVO;
+import com.ran.commons.annotation.RateLimit;
 import com.ran.commons.response.ApiResult;
+import com.ran.commons.annotation.space.EnterprisePreAuth;
+import com.ran.commons.dto.space.EnterpriseAddDTO;
+import com.ran.commons.dto.space.EnterpriseVO;
 import com.ran.commons.service.space.EnterpriseService;
+import com.ran.hub.service.space.EnterpriseBizService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
 @Slf4j
+@RestController
 @RequestMapping("/enterprise")
-
+@Tag(name = "Enterprise Team")
+@Validated
 public class EnterpriseController {
     @Resource
     private EnterpriseService enterpriseService;
-
     @Resource
     private EnterpriseBizService enterpriseBizService;
 
-    @GetMapping("/join-list")
-    @Operation(summary = "All teams")
-    public ApiResult<List<EnterpriseVO>> joinList() {
-        return ApiResult.success(enterpriseService.joinList());
+    @GetMapping("/visit-enterprise")
+    @Operation(summary = "Visit enterprise team")
+    public ApiResult<Boolean> visitEnterprise(@RequestParam(value = "enterpriseId", required = false) Long enterpriseId) {
+        return enterpriseBizService.visitEnterprise(enterpriseId);
     }
 
     @GetMapping("/check-need-create-team")
@@ -36,10 +45,60 @@ public class EnterpriseController {
         return ApiResult.success(enterpriseService.checkNeedCreateTeam());
     }
 
-    @GetMapping("/visit-enterprise")
-    @Operation(summary = "Visit enterprise team")
-    public ApiResult<Boolean> visitEnterprise(@RequestParam(value = "enterpriseId", required = false) Long enterpriseId) {
-        return enterpriseBizService.visitEnterprise(enterpriseId);
+    @GetMapping("/check-certification")
+    @Operation(summary = "Check enterprise certification")
+    public ApiResult<Boolean> checkCertification() {
+        return ApiResult.success(enterpriseService.checkCertification());
+    }
+
+    @PostMapping("/create")
+    @Operation(summary = "Create team")
+    @RateLimit(dimension = "USER", window = 1, limit = 1)
+    public ApiResult<Long> create(@RequestBody @Valid EnterpriseAddDTO enterpriseAddDTO) {
+        return enterpriseBizService.create(enterpriseAddDTO);
+    }
+
+    @GetMapping("/check-name")
+    @Operation(summary = "Check if name exists")
+    public ApiResult<Boolean> checkName(@RequestParam(value = "name") String name, @RequestParam(value = "id", required = false) Long id) {
+        return ApiResult.success(enterpriseService.checkExistByName(name, id));
+    }
+
+    @PostMapping("/update-name")
+    @Operation(summary = "Update enterprise team name")
+    @EnterprisePreAuth(key = "EnterpriseController_updateName_POST", module = "Team/Enterprise Information Settings (Team Management)", description = "Set team/enterprise name")
+    @RateLimit(dimension = "USER", window = 1, limit = 1)
+    public ApiResult<String> updateName(@RequestParam(value = "name") String name) {
+        return enterpriseBizService.updateName(name);
+    }
+
+    @PostMapping("/update-logo")
+    @Operation(summary = "Set team/enterprise LOGO")
+    @EnterprisePreAuth(key = "EnterpriseController_updateLogo_POST", module = "Team/Enterprise Information Settings (Team Management)", description = "Set team/enterprise LOGO")
+    @RateLimit(dimension = "USER", window = 1, limit = 1)
+    public ApiResult<String> updateLogo(@RequestParam(value = "logoUrl") String logoUrl) {
+        return enterpriseBizService.updateLogo(logoUrl);
+    }
+
+    @PostMapping("/update-avatar")
+    @Operation(summary = "Set team/enterprise avatar")
+    @EnterprisePreAuth(key = "EnterpriseController_updateAvatar_POST", module = "Team/Enterprise Information Settings (Team Management)", description = "Set team/enterprise avatar")
+    @RateLimit(dimension = "USER", window = 1, limit = 1)
+    public ApiResult<String> updateAvatar(@RequestParam(value = "avatarUrl") String avatarUrl) {
+        return enterpriseBizService.updateAvatar(avatarUrl);
+    }
+
+    @GetMapping("/detail")
+    @Operation(summary = "Team details")
+    @EnterprisePreAuth(key = "EnterpriseController_detail_GET", module = "Team/Enterprise Information View", description = "View team/enterprise details")
+    public ApiResult<EnterpriseVO> detail() {
+        return ApiResult.success(enterpriseService.detail());
+    }
+
+    @GetMapping("/join-list")
+    @Operation(summary = "All teams")
+    public ApiResult<List<EnterpriseVO>> joinList() {
+        return ApiResult.success(enterpriseService.joinList());
     }
 
 }

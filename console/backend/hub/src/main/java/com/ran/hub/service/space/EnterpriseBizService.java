@@ -1,5 +1,6 @@
 package com.ran.hub.service.space;
 
+import com.ran.commons.dto.space.EnterpriseAddDTO;
 import com.ran.commons.response.ApiResult;
 
 public interface EnterpriseBizService {
